@@ -1,0 +1,80 @@
+
+import java.util.List;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.io.BufferedReader;
+import java.text.DecimalFormat;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+        List<WordLengthCounter> lci = List.of(
+                new WordLengthCounter("File1"),
+                new WordLengthCounter("File2"),
+                new WordLengthCounter("File3")
+        );
+        long timeStartMulti = System.currentTimeMillis();
+        Controller.searchAverageLengthOfWordsInFiles(lci);
+        System.out.println(new DecimalFormat("0.00").format(WordLengthCounter.averageLengthOfWords)
+                + "\nMulti Tread time = " + (System.currentTimeMillis() - timeStartMulti));
+
+    }
+}
+
+class Controller {
+    public static void searchAverageLengthOfWordsInFiles(List<WordLengthCounter> fileWrapperList) {
+        System.out.println("----------------===Multi===----------------");
+        fileWrapperList.forEach(thread -> {
+            try {
+                thread.getThread().join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        WordLengthCounter.averageLengthOfWords = WordLengthCounter.ALL_TEXT
+                .parallelStream()
+                .mapToInt(String::length)
+                .average()
+                .getAsDouble();
+    }
+}
+
+class WordLengthCounter implements Runnable {
+    public static final List<String> ALL_TEXT = Collections.synchronizedList(new ArrayList<>());
+    private final String file;
+    private final Thread thread;
+
+    public static double averageLengthOfWords;
+
+    public WordLengthCounter(String file) {
+        this.file = file;
+        thread = new Thread(this);
+        thread.start();
+    }
+
+    public String getFile() {
+        return file;
+    }
+
+    public Thread getThread() {
+        return thread;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Start " + Thread.currentThread().getId() + " tread");
+        readingFile();
+    }
+
+    private void readingFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                Collections.addAll(ALL_TEXT, line.split(" "));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}

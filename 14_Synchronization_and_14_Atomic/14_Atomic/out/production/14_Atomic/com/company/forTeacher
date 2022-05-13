@@ -1,0 +1,86 @@
+import java.util.List;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.concurrent.atomic.DoubleAdder;
+
+public class Dispatcher {
+    static DoubleAdder result = new DoubleAdder();
+
+    public static void main(String[] args) throws InterruptedException {
+        List<NumberCounter> listFileNames = new ArrayList<>();
+        listFileNames.add(new NumberCounter("File1", 1));
+        listFileNames.add(new NumberCounter("File2", 2));
+        listFileNames.add(new NumberCounter("File3", 3));
+
+        Controller.threadsStarter(listFileNames);
+
+        System.out.println(result);
+    }
+}
+
+
+class Controller {
+    static void threadsStarter(List<NumberCounter> list) throws InterruptedException {
+        List<Thread> threads = new ArrayList<>();
+
+        list.forEach(temp -> {
+                   Thread tempTread = new Thread(temp);
+                   threads.add(tempTread);
+                   tempTread.start();
+               });
+
+        for (Thread temp : threads) {
+            temp.join();
+        }
+    }
+}
+
+
+class NumberCounter implements Runnable {
+    private String fileName;
+    private int counterId;
+
+    public String getFileName() {
+        return fileName;
+    }
+    public int getCounterId() {
+        return counterId;
+    }
+
+    protected void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+    protected void setCounterId(int counterId) {
+        this.counterId = counterId;
+    }
+
+    NumberCounter(String fileName, int counterId) {
+        this.fileName = fileName;
+        this.counterId = counterId;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Start tread " + counterId);
+        Pattern pattern = Pattern.compile("\\d+");
+        String line;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            while ((line = reader.readLine()) != null) {
+                for (String word : line.split(" ")) {
+                    Matcher matcher = pattern.matcher(word);
+                    if (matcher.find()) {
+                        Dispatcher.result.add(Double.parseDouble(word));
+                    }
+                }
+            }
+            System.out.println("Thread number: " + counterId + " finished.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}

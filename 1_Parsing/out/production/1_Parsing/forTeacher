@@ -1,0 +1,62 @@
+
+import java.io.*;
+import java.util.*;
+
+class Main {
+    public static void main(String[] args) {
+        Controller.parsing(new File("result.txt"));
+    }
+}
+
+class Controller {
+
+    public static void parsing(File resultFile) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите длину слова: ");
+
+        int wordLength = scanner.nextInt();
+
+        BufferedReader br = null;
+        try {
+
+            PrintWriter pw = new PrintWriter(resultFile);
+            br = new BufferedReader(new FileReader("text.txt"));
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] symbolArr = {".", "?", ",", "!", ":", ";"};
+
+                for (String symb : symbolArr) {
+                    line = line.replace(symb, (" " + symb));
+                }
+
+                for (String word : line.split(" ")) {
+                    word += " ";
+
+                    if (word.replaceAll("[.,?!]", "").length() - 1 != wordLength) {
+                        pw.print(word);
+                    } else {
+
+                        Pattern p = Pattern.compile("[AEIOYUaeioyu].{" + (wordLength - 1) + "}");
+                        word = word.replace(" ", "");
+                        Matcher m = p.matcher(word);
+
+                        if (m.find()) {
+                            pw.print(word + " ");
+                        }
+                    }
+                }
+                pw.println();
+            }
+            br.close();
+            pw.flush();
+            pw.close();
+
+
+        } catch (IOException e) {
+            System.out.println("Error: " + e);
+        }
+        System.out.println("Success!");
+    }
+}
+

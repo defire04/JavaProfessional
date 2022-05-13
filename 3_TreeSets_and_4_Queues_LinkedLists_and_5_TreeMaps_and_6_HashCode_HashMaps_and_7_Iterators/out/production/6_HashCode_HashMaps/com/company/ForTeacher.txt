@@ -1,0 +1,315 @@
+﻿import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+
+        HashMap<Point, Integer> mapForPoints = new HashMap<>();
+        HashMap<Line, Integer> mapForLines = new HashMap<>();
+        File file = new File("LINES");
+
+        List<Point> listOfPoints = new ArrayList<>();
+        listOfPoints.add(new Point(1, 3, "A"));
+        listOfPoints.add(new Point(3, 3, "B"));
+        listOfPoints.add(new Point(4, 1, "C"));
+        listOfPoints.add(new Point(5, 2, "D"));
+        listOfPoints.add(new Point(6, 3, "E"));
+
+
+        Controller.createGraph(listOfPoints);
+        Controller.numberOfLinesThroughPoint(listOfPoints, mapForPoints);
+        Controller.numberOfPointsOnLine(listOfPoints, mapForLines);
+
+
+        // Write to file
+        List<HashMap<? extends GeometricComponents, ?>> whatWriteToFile = new ArrayList<>();
+        whatWriteToFile.add(mapForPoints);
+        whatWriteToFile.add(mapForLines);
+
+        Controller.writeToFile(file, whatWriteToFile);
+
+        // Read from file
+        Controller.readFile(file);
+    }
+}
+
+abstract class GeometricComponents { // fot generic }
+
+
+class Point extends GeometricComponents implements Serializable, Comparable<Point> {
+    private int x;
+    private int y;
+    private String name;
+
+    public int getX() {
+        return x;
+    }
+    public int getY() {
+        return y;
+    }
+    public String getName() {
+        return name;
+    }
+
+    protected void setX(int x) {
+        this.x = x;
+    }
+    protected void setY(int y) {
+        this.y = y;
+    }
+    protected void setName(String name) {
+        this.name = name;
+    }
+
+    Point() {
+    }
+
+    Point(int x, int y, String name) {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Point point = (Point) o;
+        return this.x == point.x && this.y == point.y;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return 17 * this.x + 13 * this.y;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Point:" + this.name +"(" + this.x + "," + this.y + ")";
+    }
+
+
+    @Override
+    public int compareTo(Point o) {
+        int result = this.x - o.x;
+        if (result == 0) {
+            result = this.y - o.y;
+            if (result == 0) {
+                result = this.name.compareTo(o.name);
+            }
+        }
+        return result;
+    }
+
+
+    protected boolean isLinesThroughPoint(Line line) {
+        return this.y == (line.getK() * this.x + line.getB());
+    }
+}
+
+
+class Line extends GeometricComponents implements Serializable, Comparable<Line> {
+    private double k;
+    private double b;
+    private String name;
+
+    public double getK() {
+        return k;
+    }
+    public double getB() {
+        return b;
+    }
+    public String getName() {
+        return name;
+    }
+
+    protected void setK(double k) {
+        this.k = k;
+    }
+    protected void setB(double b) {
+        this.b = b;
+    }
+    protected void setName(String name) {
+        this.name = name;
+    }
+
+
+    Line() {
+    }
+
+
+    Line(Point dot1, Point dot2) {
+        if (dot1.getX() == dot2.getX()) {
+            this.k = dot1.getX();
+            this.b = 0;
+        } else if (dot1.getY() == dot2.getY()) {
+            this.k = 0;
+            this.b = dot1.getY();
+        } else {
+            this.k = -((double) (dot2.getY() - dot1.getY()) / (double) (dot1.getX() - dot2.getX()));
+            this.b = -((double) (dot2.getX() * dot1.getY() - dot1.getX() * dot2.getY()) / (double) (dot1.getX() - dot2.getX()));
+        }
+        this.name = dot1.getName() + dot2.getName();
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Line line = (Line) o;
+        return Double.compare(line.k, this.k) == 0 && Double.compare(line.b, this.b) == 0;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return (int) (19 * this.k + 17 * this.b);
+    }
+
+
+    @Override
+    public String toString() {
+    	// String.format("%.2f", value) медленнее ?
+        DecimalFormat decimalFormat = new DecimalFormat("#0.00");
+        return this.name + " (K=" + decimalFormat.format(this.k) + " B=" + decimalFormat.format(this.b) + ")";
+    }
+
+
+    @Override
+    public int compareTo(Line o) {
+        int result = Double.compare(this.k, o.k);
+        if (result == 0) {
+            result = Double.compare(this.b, o.b);
+        }
+        return result;
+    }
+
+    protected boolean isPointOnLine(Point point) {
+        return point.getY() == (this.k * point.getX() + this.b);
+    }
+
+    static TreeSet<Line> createLines(List<Point> pointList){
+        TreeSet<Line> allLines = new TreeSet<>();
+        pointList.forEach(point -> {
+            pointList.forEach(point2 -> {
+                if(!point.equals(point2)){
+                    allLines.add(new Line(point, point2));
+                }
+            });
+        });
+        return allLines;
+    }
+}
+
+
+class Controller {
+    static void numberOfLinesThroughPoint(List<Point> pointList,HashMap<Point, Integer> resultHashMapForPoints ) {
+        System.out.println("------------------ Points ------------------");
+
+        TreeSet<Line> allLines = Line.createLines(pointList);
+
+        pointList.forEach(point -> {
+//            AtomicInteger count = new AtomicInteger();
+            allLines.forEach(line -> {
+                if (point.isLinesThroughPoint(line)) {
+//                    resultHashMapForPoints.put(point, Integer.toString(count.incrementAndGet())); // Если HashMap value = String
+                    resultHashMapForPoints.compute(point, (key, numberOfLines)-> numberOfLines == null ? 1 : ++numberOfLines);
+                }
+            });
+            System.out.println(point.getName() + "(" + point.getX() + "," + point.getY() + ")" +
+                    " The number of line that cross : " + resultHashMapForPoints.get(point));
+        });
+    }
+
+
+    static void numberOfPointsOnLine(List<Point> pointList, HashMap<Line, Integer> resultHashMapForLines) {
+        System.out.println("------------------ Lines ------------------");
+
+        TreeSet<Line> allLines = Line.createLines(pointList);
+
+        allLines.forEach(line -> {
+            TreeSet<String> namesPoint = new TreeSet<>();
+            pointList.forEach(point -> {
+                if (line.isPointOnLine(point)) {
+                    namesPoint.add(point.getName());
+
+                }
+            });
+            resultHashMapForLines.put(line, namesPoint.size());
+            System.out.println("Points on line " + line + ": " + namesPoint +
+                    "\nCount of points that cross line : " + resultHashMapForLines.get(line) + "\n" +
+                    "            - - - - - - - - ");
+        });
+    }
+
+
+    static void writeToFile(File fileName, List<HashMap<? extends GeometricComponents, ?>> whatWriteToFile) {
+        System.out.println(" ------------------ WriteFile ------------------");
+
+        try (ObjectOutputStream input = new ObjectOutputStream(new FileOutputStream(fileName))){
+            try {
+                for (HashMap<?, ?> info : whatWriteToFile) {
+                    input.writeObject(info);
+                }
+                System.out.println("Recorded successfully!");
+            } finally {
+                input.flush();
+            }
+        } catch (IOException e) {
+            System.out.println("Error: " + e);
+        }
+    }
+
+
+    static void readFile(File fileName) {
+        System.out.println(" ------------------ ReadFile ------------------");
+        try (ObjectInputStream output = new ObjectInputStream(new FileInputStream(fileName))) {
+            while (true) {
+                try {
+                    System.out.println(output.readObject());
+                } catch (EOFException e) {
+                    break;
+                }
+            }
+            System.out.println("Read successfully!");
+        } catch (ClassNotFoundException | IOException e) {
+            System.out.println("Error: " + e);
+        }
+    }
+
+
+    static void createGraph(List<Point> pointsList) { // Рисует точки в консоле
+        System.out.println("------------------ Graph ------------------");
+        int maxHeight = Integer.MIN_VALUE;
+        int maxLength = Integer.MIN_VALUE;
+
+        for (Point point : pointsList) {
+            maxHeight = Math.max(point.getY(), maxHeight);
+            maxLength = Math.max(point.getX(), maxLength);
+        }
+
+        String[][] graph = new String[maxHeight][maxLength];
+        for (Point tempPoint : pointsList) {
+            graph[tempPoint.getY() - 1][tempPoint.getX() - 1] = tempPoint.getName();
+        }
+
+        for (int i = graph.length - 1; i >= 0; i--) {
+            System.out.print(i + 1 + " ");
+            for (int j = 0; j < graph[i].length; j++) {
+                System.out.print((graph[i][j] != null ? graph[i][j] + " " : "*" + " "));
+            }
+            System.out.println();
+        }
+        for (int i = 0; i <= graph[1].length; i++) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
+    }
+}

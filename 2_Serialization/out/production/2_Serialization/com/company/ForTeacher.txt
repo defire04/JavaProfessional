@@ -1,0 +1,451 @@
+import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+    public static void main(String[] args) throws IOException {
+
+        System.out.println("--------------------=== Planes ===--------------------");
+
+        File f1 = new File("PLANES");
+        List<Plane> planesList = Plane.factoryPlanes(3);
+        Collections.sort(planesList);
+
+        Controller.writeToFile(f1, planesList);
+        Controller.readFile(f1);
+
+        System.out.println("--------------------=== SHIPS ===--------------------");
+
+        File f2 = new File("SHIPS");
+        List<Ship> shipsList = new ArrayList<>();
+        shipsList.add(new Ship(400.0, 2022,
+                new Engine("Big", 3), 300.0, 2000.0, new Boat(23, "Wood")));
+        shipsList.add(new Ship(500.0, 2009,
+                new Engine("Small", 1), 400.0, 3000.0, new Boat(50, "Metal")));
+        shipsList.add(new Ship(600.0, 2014,
+                new Engine("Medium", 2), 500.0, 5000.0, new Boat(40, "Paper")));
+        Collections.sort(shipsList);
+
+        Controller.writeToFile(f2, shipsList);
+        Controller.readFile(f2);
+    }
+}
+
+
+class Vehicle implements Comparable<Vehicle> {
+
+    private double speed;
+    private int yearOfProduction;
+    transient private Engine engine;
+
+    public double getSpeed() {
+        return speed;
+    }
+    public int getYearOfProduction() {
+        return yearOfProduction;
+    }
+    public Engine getEngine() {
+        return engine;
+    }
+
+    protected void setSpeed(double speed) {
+        this.speed = speed;
+    }
+    protected void setYearOfProduction(int yearOfProduction) {
+        this.yearOfProduction = yearOfProduction;
+    }
+    protected void setEngine(Engine engine) {
+        this.engine = engine;
+    }
+
+
+    Vehicle(){}
+
+    Vehicle(double speed, int yearOfProduction, Engine engine) {
+        this.speed = speed;
+        this.yearOfProduction = yearOfProduction;
+        this.engine = engine;
+    }
+
+
+    @Override
+    public String toString() {
+        return  "\nSpeed = " + this.speed + "\n" +
+                "Year of production = " + this.yearOfProduction + "\n" +
+                "Engine : " + '\n'+ this.engine ;
+    }
+
+
+    @Override
+    public int compareTo(Vehicle o) {
+        return this.yearOfProduction - o.yearOfProduction;
+    }
+}
+
+class Engine {
+
+    private String type;
+    private double power;
+
+    public String getType() {
+        return type;
+    }
+    public double getPower() {
+        return power;
+    }
+
+    protected void setType(String type) {
+        this.type = type;
+    }
+    protected void setPower(double power) {
+        this.power = power;
+    }
+
+    Engine(){}
+
+    Engine(String type, double power){
+        this.type = type;
+        this.power = power;
+    }
+
+    @Override
+    public String toString() {
+        return "Type = " + this.type + '\n' +
+               "Power = " + this.power + '\n';
+    }
+}
+
+class Plane extends Vehicle implements Serializable {
+
+    private String model;
+    private int flightRange;
+    transient private Chassis chassis;
+
+    public String getModel() {
+        return model;
+    }
+    public int getFlightRange() {
+        return flightRange;
+    }
+    public Chassis getChassis() {
+        return chassis;
+    }
+
+    protected void setModel(String model) {
+        this.model = model;
+    }
+    protected void setFlightRange(int flightRange) {
+        this.flightRange = flightRange;
+    }
+    protected void setChassis(Chassis chassis) {
+        this.chassis = chassis;
+    }
+
+    Plane() {
+    }
+
+
+    Plane(double speed, int yearOfProduction, Engine engine, String model, int flightRange, Chassis chassis) {
+        super(speed, yearOfProduction, engine);
+        this.model = model;
+        this.flightRange = flightRange;
+        this.chassis = chassis;
+    }
+
+
+    @Override
+    public String toString() {
+        return super.toString() +
+                "Model = " + this.model + '\n' +
+                "Flight range = " + this.flightRange + '\n' +
+                "Chassis: " + '\n' + this.chassis + '\n';
+    }
+
+
+    @Serial
+    private void writeObject(ObjectOutputStream os) {
+        try {
+            os.defaultWriteObject();
+            os.writeObject(getSpeed());
+            os.writeObject(getYearOfProduction());
+            os.writeObject(getEngine().getType());
+            os.writeObject(getEngine().getPower());
+            os.writeObject(chassis.getWheel().getPower());
+            os.writeObject(chassis.getWheel().getDiameter());
+            os.writeObject(chassis.getNumberOfWheels());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Serial
+    private void readObject(ObjectInputStream is) {
+        try {
+            is.defaultReadObject();
+            setSpeed((double) is.readObject());
+            setYearOfProduction((int) is.readObject());
+            setEngine(new Engine((String) is.readObject(), (double) is.readObject()));
+
+            this.chassis = new Chassis(new Wheel((int) is.readObject(), (double) is.readObject()), (int) is.readObject());
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println(e + " ");
+        }
+    }
+
+    public static ArrayList<Plane> factoryPlanes(int number) {
+        ArrayList<Plane> planeArrayList = new ArrayList<>();
+
+        for (int i = 0; i < number; i++) {
+
+            planeArrayList.add(new Plane(Controller.randomSpeed(), Controller.randomYear(), new Engine("gasolines", Controller.randomPower()),
+                    Controller.randomAircraftModel(), Controller.randomFlightRange(), new Chassis(new Wheel(200, 70), 20)));
+        }
+        return planeArrayList;
+    }
+}
+
+class Chassis {
+    transient private Wheel wheel;
+    private int numberOfWheels;
+
+    public Wheel getWheel() {
+        return wheel;
+    }
+    public int getNumberOfWheels() {
+        return numberOfWheels;
+    }
+
+    protected void setWheel(Wheel wheel) {
+        this.wheel = wheel;
+    }
+    protected void setNumberOfWheels(int numberOfWheels) {
+        this.numberOfWheels = numberOfWheels;
+    }
+
+
+    Chassis() {
+    }
+
+    Chassis(Wheel wheel, int numberOfWheels){
+        this.wheel = wheel;
+        this.numberOfWheels = numberOfWheels;
+    }
+
+    @Override
+    public String toString() {
+        return "Wheel:" + '\n' + this.wheel + '\n' +
+                "Number of wheels = " + this.numberOfWheels + '\n';
+    }
+}
+
+class Wheel  {
+    private int power;
+    private double diameter;
+
+    public int getPower() {
+        return power;
+    }
+    public double getDiameter() {
+        return diameter;
+    }
+
+    protected void setPower(int power) {
+        this.power = power;
+    }
+    protected void setDiameter(double diameter) {
+        this.diameter = diameter;
+    }
+
+    Wheel(){}
+
+    Wheel(int power, double diameter){
+        this.power = power;
+        this.diameter = power;
+    }
+
+    @Override
+    public String toString() {
+        return "Power = " + power + "\n" +
+                "Diameter = " + diameter;
+    }
+}
+
+class Ship extends Vehicle implements Externalizable {
+
+    private double displacement;
+    private double length;
+    transient private Boat boat;
+
+    public double getDisplacement() {
+        return displacement;
+    }
+    public double getLength() {
+        return length;
+    }
+    public Boat getBoat() {
+        return boat;
+    }
+
+    protected void setDisplacement(double displacement) {
+        this.displacement = displacement;
+    }
+    protected void setLength(double length) {
+        this.length = length;
+    }
+    protected void setBoat(Boat boat) {
+        this.boat = boat;
+    }
+
+    public Ship(){}
+
+    Ship(double speed, int yearOfProduction, Engine engine, double displacement, double length, Boat boat){
+        super(speed, yearOfProduction, engine);
+        this.displacement = displacement;
+        this.length = length;
+        this.boat = boat;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() +
+                "Displacement = " + this.displacement + '\n' +
+                "Length = " + this.length + '\n' +
+                "Boat: " + '\n' + this.boat + '\n' ;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeDouble(this.getSpeed());
+        out.writeObject(this.getYearOfProduction());
+        out.writeObject(this.getEngine().getType());
+        out.writeObject(this.getEngine().getPower());
+
+        out.writeDouble(this.displacement);
+        out.writeDouble(this.length);
+        out.writeObject(this.boat.getNumberOfPeople());
+        out.writeObject(this.boat.getMaterial());
+
+    }
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+
+        setSpeed(in.readDouble());
+        setYearOfProduction((int) in.readObject());
+        setEngine(new Engine((String) in.readObject(), (double) in.readObject()));
+
+        this.displacement = in.readDouble();
+        this.length = in.readDouble();
+        this.boat = new Boat((int) in.readObject(),(String)in.readObject());
+    }
+}
+
+class Boat {
+    private int numberOfPeople;
+    private String material;
+
+    public int getNumberOfPeople() {
+        return numberOfPeople;
+    }
+    public String getMaterial() {
+        return material;
+    }
+
+    protected void setNumberOfPeople(int numberOfPeople) {
+        this.numberOfPeople = numberOfPeople;
+    }
+    protected void setMaterial(String material) {
+        this.material = material;
+    }
+
+    Boat(){}
+
+    Boat(int numberOfPeople, String material){
+        this.numberOfPeople = numberOfPeople;
+        this.material = material;
+    }
+
+    @Override
+    public String toString() {
+        return "Number of people = " + this.numberOfPeople + '\n' +
+                "Material = " + this.material;
+    }
+}
+
+class Controller {
+    static <T> void writeToFile(File fileName, List<T> whatWriteToFile) throws IOException {
+        System.out.println(" ------------------ WriteFile ------------------");
+        ObjectOutputStream input = null;
+        try {
+            input = new ObjectOutputStream(new FileOutputStream(fileName));
+            for (T info : whatWriteToFile) {
+                input.writeObject(info);
+            }
+            System.out.println("Recorded successfully!");
+        } catch (IOException e) {
+            System.out.println("Error: " + e);
+        } finally {
+            assert input != null;
+            input.flush();
+            input.close();
+        }
+    }
+
+
+    static void readFile(File fileName) {
+        System.out.println(" ------------------ ReadFile ------------------");
+        try (ObjectInputStream output = new ObjectInputStream(new FileInputStream(fileName))) {
+            while (true) {
+                try {
+                    System.out.println(output.readObject());
+                } catch (EOFException e) {
+                    break;
+                }
+            }
+            System.out.println("Read successfully!");
+        } catch (ClassNotFoundException | IOException e) {
+            System.out.println("Error: " + e);
+        }
+    }
+
+
+    static double randomSpeed() {
+        double max = 1020;
+        double min = 200;
+        max -= min;
+        return (Math.random() * ++max) + min;
+    }
+
+    static int randomYear() {
+        double max = 2020;
+        double min = 1995;
+        max -= min;
+        return (int) ((Math.random() * ++max) + min);
+    }
+
+    static double randomPower() {
+        double max = 3.5;
+        double min = 1.8;
+        max -= min;
+        return (Math.random() * ++max) + min;
+    }
+
+    static String randomAircraftModel() {
+        double max = 5;
+        double min = 0;
+        max -= min;
+
+        String[] models = {"1/139 Boeing 707-120", "1/72 DC-8 / 50 Lufthansa", "1/72 DC-8 / 50 UAL", "1/72 DC-8 / 50 DAL", "1/144 Airbus A350-900",
+                "1/200 (snap) Aeroflot P.Tchaikovsky Vq-Bfy"};
+
+        return models[(int) ((Math.random() * ++max) + min)];
+    }
+
+    static int randomFlightRange() {
+        double max = 11000;
+        double min = 6000;
+        max -= min;
+        return (int) ((Math.random() * ++max) + min);
+    }
+}
+

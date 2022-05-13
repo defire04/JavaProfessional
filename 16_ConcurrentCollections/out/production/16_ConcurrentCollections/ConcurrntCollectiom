@@ -1,0 +1,96 @@
+
+import java.util.*;
+import java.util.List;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class Dispatcher {
+    static Map<String, Long> result = new ConcurrentHashMap<>();
+
+    public static void main(String[] args) {
+        List<FileWrapper> listFileNames = List.of(
+                new FileWrapper("File1"),
+                new FileWrapper("File2"),
+                new FileWrapper("File3")
+        );
+        Controller.threadsStarter(listFileNames);
+        System.out.println(result);
+    }
+}
+
+
+class Controller {
+    static void threadsStarter(List<FileWrapper> list) {
+        List<Thread> threads = new ArrayList<>();
+
+        list.forEach(fileWrapper -> {
+            Thread tempThread = new Thread(new WorldFinder(fileWrapper));
+            threads.add(tempThread);
+            tempThread.start();
+        });
+
+        threads.forEach(thread -> {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+}
+
+
+class WorldFinder implements Runnable {
+
+    private final FileWrapper file;
+
+    public FileWrapper getFile() {
+        return file;
+    }
+
+    WorldFinder(FileWrapper file) {
+        this.file = file;
+    }
+
+    @Override
+    public void run() {
+        file.adder();
+    }
+}
+
+
+class FileWrapper {
+    private final String fileName;
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    FileWrapper(String fileName) {
+        this.fileName = fileName;
+    }
+
+    void adder() {
+        long threadId = Thread.currentThread().getId();
+        System.out.println("Start tread " + threadId);
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                for (String word : line.split(" ")) {
+                    if (word.length() != 1) {
+                        if (word.charAt(0) == word.charAt(word.length() - 1)) {
+                            Dispatcher.result.compute(word, (str, count) -> count == null ? 1 : ++count);
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Finished tread " + threadId);
+    }
+}

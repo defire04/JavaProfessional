@@ -1,0 +1,131 @@
+import java.util.*;
+
+public class Dispatcher {
+    public static void main(String[] args){
+        List<String> listFileNames = List.of("File1", "File2", "File3");
+
+         System.out.println("----------------=== Single ===----------------");
+        Set<FileWrapper> resultTreeSetForSingle = new TreeSet<>();
+        Controller.startSingleThread(listFileNames, resultTreeSetForSingle);
+        View.printSet(resultTreeSetForSingle);
+
+        System.out.println("----------------=== Multi ===----------------");
+        Set<FileWrapper> resultTreeSetForMulti = new TreeSet<>();
+        Controller.startMultiThreads(listFileNames, resultTreeSetForMulti);
+        View.printSet(resultTreeSetForMulti);
+
+    }
+}
+
+
+class FileWrapper implements Comparable<FileWrapper> {
+    private final File file;
+    private int punctuationSymbolCount;
+
+    public File getFile() {
+        return file;
+    }
+    public int getPunctuationSymbolCount() {
+        return punctuationSymbolCount;
+    }
+
+    protected void setPunctuationSymbolCount(int punctuationSymbolCount) {
+        this.punctuationSymbolCount = punctuationSymbolCount;
+    }
+
+    FileWrapper(File file) {
+        this.file = file;
+    }
+
+    @Override
+    public String toString() {
+        return this.file + " has " + this.punctuationSymbolCount + " delimiters";
+    }
+
+    @Override
+    public int compareTo(FileWrapper otherFile) {
+        return otherFile.punctuationSymbolCount - this.punctuationSymbolCount;
+    }
+}
+
+
+record PunctuationChecker(FileWrapper fileWrap) implements Callable<FileWrapper> {
+    public FileWrapper getFileWrap() {
+        return fileWrap;
+    }
+
+    @Override
+    public FileWrapper call() {
+        int charSymbol, count = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileWrap.getFile()))) {
+            while ((charSymbol = reader.read()) != -1) {
+                if (charSymbol == '.' | charSymbol == ',' | charSymbol == ';'
+                        | charSymbol == ':' | charSymbol == '!') {
+                    this.fileWrap.setPunctuationSymbolCount(++count);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return this.fileWrap;
+    }
+}
+
+
+class Controller {
+    static void startMultiThreads(List<String> files, Set<FileWrapper> resultTreeSetForMulti) {
+        ExecutorService es = Executors.newCachedThreadPool();
+
+        List<Callable<FileWrapper>> lci = new ArrayList<>();
+        lci.add(new PunctuationChecker(new FileWrapper(new File(files.get(0)))));
+        lci.add(new PunctuationChecker(new FileWrapper(new File(files.get(1)))));
+        lci.add(new PunctuationChecker(new FileWrapper(new File(files.get(2)))));
+
+        long timeStartMulti = System.currentTimeMillis();
+        List<Future<FileWrapper>> resultMulti = null;
+        try {
+            resultMulti = es.invokeAll(lci);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        es.shutdown();
+        long timeFinishedMulti = System.currentTimeMillis();
+
+        if (resultMulti != null) {
+            for (Future<FileWrapper> temp : resultMulti) {
+                try {
+                    resultTreeSetForMulti.add(temp.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println("Multi Tread = " + (timeFinishedMulti - timeStartMulti));
+    }
+
+    static void startSingleThread(List<String> files, Set<FileWrapper> resultTreeSetForSingle) {
+
+        PunctuationChecker p1 = new PunctuationChecker(new FileWrapper(new File(files.get(0))));
+        PunctuationChecker p2 = new PunctuationChecker(new FileWrapper(new File(files.get(1))));
+        PunctuationChecker p3 = new PunctuationChecker(new FileWrapper(new File(files.get(2))));
+
+        long timeStartSingle = System.currentTimeMillis();
+        FileWrapper fw1 = p1.call();
+        FileWrapper fw2 = p2.call();
+        FileWrapper fw3 = p3.call();
+        long timeFinished = System.currentTimeMillis();
+
+        resultTreeSetForSingle.add(fw1);
+        resultTreeSetForSingle.add(fw2);
+        resultTreeSetForSingle.add(fw3);
+
+        System.out.println("Single Tread = " + (timeFinished - timeStartSingle));
+    }
+}
+
+
+class View {
+    static void printSet(Set<?> set){
+        set.forEach(System.out::println);
+    }
+}

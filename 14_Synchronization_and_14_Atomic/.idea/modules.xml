@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/14_Atomic/14_Atomic.iml" filepath="$PROJECT_DIR$/14_Atomic/14_Atomic.iml" />
+      <module fileurl="file://$PROJECT_DIR$/14_Synchronization/14_Synchronization.iml" filepath="$PROJECT_DIR$/14_Synchronization/14_Synchronization.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/14_Synchronization_and_14_Atomic.iml" filepath="$PROJECT_DIR$/.idea/14_Synchronization_and_14_Atomic.iml" />
+    </modules>
+  </component>
+</project>

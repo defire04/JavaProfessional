@@ -1,0 +1,125 @@
+package com.company;
+
+import java.util.*;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+        List<Integer> list = List.of(-9, 6, 3, 4, 2, 5, 3, 4, 6, 9);
+        String st = """
+                Text for test.
+                Thinking In Java should be read cover to cover by every Java programmer, then kept close at hand for frequent reference.
+                The exercises are challenging, and the chapter on Collections is superb! Not only did this book help me to pass the Sun Certified Java Programmer exam;
+                it’s also the first book I turn to whenever I have a Java question. Jim Pleger, Loudoun County (Virginia) Government
+                Much better than any other Java book I’ve seen. Make that “by an order of magnitude”. Very complete, with excellent right-to-the-point examples and intelligent, not dumbed-down, explanations.
+                In contrast to many other Java books I found it to be unusually mature, consistent, intellectually honest, well-written and precise. IMHO, an ideal book for studying Java.
+                Anatoly Vorobey, Technion University, Haifa, Israel
+                Thank you again for your awesome book. I was really floundering (being a non-C programmer), but your book has brought me up to speed as fast as I could read it. It’s really cool to be able to understand
+                the underlying principles and concepts from the start, rather than having to try to build that conceptual model through trial and error. Hopefully I will be able to attend your seminar in the
+                not-too-distant future. Randall R Hawley, Automation Technician, Eli Lilly & Co.
+                The best computer book writing I have seen.
+                This is one of the best books I’ve read about a programming language. The best book ever written on Java. Ravindra Pai, Oracle Corporation, SUNOS product line
+                This is the best book on Java that I have ever found! You have done a great job. Your depth is amazing. I will be purchasing the book when it is published.
+                I have been learning Java since October 96. I have read a few books, and consider yours a “MUST READ”.
+                These past few months we have been focused on a product written entirely in Java. Your book has helped solidify topics I was shaky on and has expanded my knowledge base.
+                I have even used some of your explanations as information in interviewing contractors to help our team. I have found how much Java knowledge they have by asking them about things
+                I have learned from reading your book (e g , the difference between arrays and Vectors).Your book is great! Steve Wilkinson, Senior Staff Specialist, MCI Telecommunications
+                """;
+        System.out.println("------------------------====First task====------------------------" +
+                "\nChange max and minimum in collection:\n" + Controller.changeMaximumAndMinimum(list) +
+                "\n------------------------====Second task====------------------------" +
+                "\nCollection of elements is greater than the arithmetic mean:\n"
+                + Controller.collectionOfElementsGreaterThanArithmeticMean(list) +
+                "\n------------------------====Third task====------------------------");
+        Controller.createMapWhereKeyIndexSupplyValueDifferenceBetweenConsonantsAndVowels(st)
+                .forEach((key, value) -> System.out.println("Sentence number:" + key + " Has a distinction between vowels and consonants:" + value));
+    }
+}
+
+class Controller {
+
+    //- в колекції цілих чисел поміняти місцями максимум та мінімум;
+    static List<Integer> changeMaximumAndMinimum(List<Integer> integerList) {
+
+        Function<List<Integer>, int[]> minMaxSearch = (list) -> new int[]{
+                integerList.stream().min(Integer::compare).get(),
+                integerList.stream().max(Integer::compare).get()
+        };
+
+        int[] minAndMax = minMaxSearch.apply(integerList);
+
+        return integerList.stream().map(integer -> {
+            if (integer == minAndMax[1]) {
+                integer = minAndMax[0];
+            } else if (integer == minAndMax[0]) {
+                integer = minAndMax[1];
+            }
+            return integer;
+        }).toList();
+    }
+
+
+    //       - визначити середнє арифметичне елементів колекції цілих чисел та сформувати
+    //     вихідну колекцію з елементів, що є більшими за середнє арифметичне;
+    static List<Integer> collectionOfElementsGreaterThanArithmeticMean(List<Integer> integerList) {
+        return integerList.stream().collect(Collectors.filtering(i -> i > integerList.stream().
+                collect(Collectors.averagingInt(Integer::intValue)), Collectors.toList()));
+    }
+
+
+    //- в кожному реченні тексту без використання попереднього розбиття на речення
+    //визначити різницю між кількістю приголосних та голосних букв і сформувати
+    //відповідний Map (key: номер речення, value: визначена різниця між кількістю
+    //приголосних та голосних букв).
+    static Map<Integer, Long> createMapWhereKeyIndexSupplyValueDifferenceBetweenConsonantsAndVowels(String text) {
+        Pattern vowelsSymbols = Pattern.compile("[AEIOUYaeiouy]");
+        AtomicReference<Matcher> matcher = new AtomicReference<>();
+        String[] stringArray = text.split("[.!?]");
+
+        return Arrays.stream(stringArray).collect(Collectors.toMap(
+                sentence -> List.of(stringArray).indexOf(sentence),
+                sentence -> {
+
+                    AtomicLong consonants = new AtomicLong();
+                    AtomicLong vowels = new AtomicLong();
+                    // ---------------------====First solution====---------------------
+                    Arrays.stream(sentence.split("")).forEach(symbol -> {
+                                matcher.set(vowelsSymbols.matcher(symbol));
+                                if (!symbol.equals("\s")) {
+                                    if (matcher.get().find()) {
+                                        vowels.getAndIncrement();
+                                    } else {
+                                        consonants.getAndIncrement();
+                                    }
+                                }
+                            }
+                    );
+                    // TODO что лучше?
+                    // ---------------------====Second solution====---------------------
+//                    Arrays.stream(sentence.split("")).filter(symbol -> !symbol.equals("\s")).forEach(symbol -> {
+//                                matcher.set(vowelsSymbols.matcher(symbol));
+//                                if (matcher.get().find()) {
+//                                    vowels.getAndIncrement();
+//                                } else {
+//                                    consonants.getAndIncrement();
+//
+//                                }
+//                            }
+//                    );
+
+                    return consonants.get() - vowels.get();
+                },
+                (x, y) -> {
+                    System.out.println("Key error");
+                    return 404L; // Возвращаю как показатель ошибки так как повториться ключ возможность не имеет
+                },
+                LinkedHashMap::new
+        ));
+    }
+}
